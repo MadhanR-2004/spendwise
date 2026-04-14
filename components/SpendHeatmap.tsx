@@ -1,18 +1,11 @@
 "use client";
 
-import { format, getDay, parseISO } from "date-fns";
+import { useMemo } from "react";
+import Calendar from "react-calendar";
+import { format, parseISO } from "date-fns";
+import "react-calendar/dist/Calendar.css";
 
 type HeatItem = { date: string; total: number };
-
-function intensity(total: number, max: number) {
-  if (total <= 0) return 0;
-  if (max <= 0) return 0;
-  const ratio = total / max;
-  if (ratio <= 0.25) return 1;
-  if (ratio <= 0.5) return 2;
-  if (ratio <= 0.75) return 3;
-  return 4;
-}
 
 export function SpendHeatmap({
   data,
@@ -27,62 +20,150 @@ export function SpendHeatmap({
 }) {
   const max = Math.max(...data.map((item) => item.total), 0);
 
-  const weeks: HeatItem[][] = [];
-  for (let i = 0; i < data.length; i += 7) {
-    weeks.push(data.slice(i, i + 7));
-  }
-
-  const monthLabels: { index: number; label: string }[] = [];
-  let lastMonth = "";
-  weeks.forEach((week, index) => {
-    const firstDay = week[0];
-    if (!firstDay) return;
-    const month = format(parseISO(firstDay.date), "MMM");
-    if (month !== lastMonth) {
-      monthLabels.push({ index, label: month });
-      lastMonth = month;
+  const toDateKey = (value: Date | string) => {
+    if (typeof value === "string") {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+      return format(parseISO(value), "yyyy-MM-dd");
     }
-  });
+    return format(value, "yyyy-MM-dd");
+  };
+
+  const getIntensity = (total: number) => {
+    if (!total || total <= 0) return 0;
+    if (max <= 0) return 0;
+    const ratio = total / max;
+    if (ratio <= 0.25) return 1;
+    if (ratio <= 0.5) return 2;
+    if (ratio <= 0.75) return 3;
+    return 4;
+  };
+
+  const spendMap = useMemo(() => {
+    const map = new Map<string, number>();
+    data.forEach((item) => map.set(item.date, item.total));
+    return map;
+  }, [data]);
+
+  const selectedDateValue = selectedDate ? parseISO(selectedDate) : new Date();
 
   return (
-    <div className="overflow-x-auto">
-      <div className="mb-2 flex text-xs text-slate-500" style={{ marginLeft: 28 }}>
-        {weeks.map((_, index) => (
-          <div key={index} className="w-3 text-center">
-            {monthLabels.find((item) => item.index === index)?.label ?? ""}
-          </div>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <div className="mt-1 grid grid-rows-7 gap-1 text-xs text-slate-500">
-          {["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => (
-            <div key={index} className="h-3 leading-3">
-              {label}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-flow-col grid-rows-7 gap-1">
-          {weeks.map((week, weekIndex) =>
-            week.map((item) => {
-              const level = intensity(item.total, max);
-              const day = getDay(parseISO(item.date));
-              const row = day === 0 ? 0 : day;
-              return (
-                <button
-                  key={item.date}
-                  className={`h-3 w-3 rounded-sm heat-${level} ${selectedDate === item.date ? "ring-2 ring-indigo-500" : ""}`}
-                  style={{ gridRow: row + 1, gridColumn: weekIndex + 1 }}
-                  title={`${format(parseISO(item.date), "PPP")}: ${new Intl.NumberFormat("en-IN", {
-                    style: "currency",
-                    currency,
-                  }).format(item.total)}`}
-                  onClick={() => onSelect(item.date)}
-                />
-              );
-            })
-          )}
-        </div>
-      </div>
+    <div className="w-full pb-3">
+      <Calendar
+        value={selectedDateValue}
+        onChange={(value) => {
+          const picked = Array.isArray(value) ? value[0] : value;
+          if (picked) onSelect(toDateKey(picked));
+        }}
+        tileClassName={({ date, view }) => {
+          if (view !== "month") return "";
+          const key = toDateKey(date);
+          const total = spendMap.get(key) ?? 0;
+          const level = getIntensity(total);
+          const selected = selectedDate === key ? "sp-cal-selected" : "";
+          return `sp-cal-tile sp-cal-${level} ${selected}`;
+        }}
+        tileContent={({ date, view }) => {
+          if (view !== "month") return null;
+          const key = toDateKey(date);
+          const total = spendMap.get(key) ?? 0;
+          if (total <= 0) return null;
+
+          const formatted = new Intl.NumberFormat("en-IN", {
+            style: "currency",
+            currency,
+            maximumFractionDigits: 0,
+          }).format(total);
+
+          return <span className="sp-cal-dot" title={`${format(date, "PPP")}: ${formatted}`} />;
+        }}
+      />
+
+      <style jsx global>{`
+        .react-calendar {
+          width: 100%;
+          border: 1px solid #27272a;
+          border-radius: 12px;
+          background: #000;
+          color: #f4f4f5;
+          padding: 14px;
+          font-family: inherit;
+        }
+
+        .react-calendar button {
+          color: #f4f4f5;
+          border-radius: 10px;
+          border: 1px solid transparent;
+        }
+
+        .react-calendar__navigation button {
+          min-width: 42px;
+          background: transparent;
+          font-weight: 600;
+          color: #f4f4f5;
+        }
+
+        .react-calendar__navigation button:enabled:hover,
+        .react-calendar__navigation button:enabled:focus,
+        .react-calendar__tile:enabled:hover,
+        .react-calendar__tile:enabled:focus {
+          background: #18181b;
+        }
+
+        .react-calendar__month-view__weekdays__weekday {
+          color: #a1a1aa;
+          font-size: 12px;
+        }
+
+        .react-calendar__month-view__weekdays__weekday abbr {
+          text-decoration: none;
+        }
+
+        .react-calendar__month-view__days__day--neighboringMonth {
+          color: #52525b;
+        }
+
+        .sp-cal-tile {
+          position: relative;
+          cursor: pointer;
+          transition: background-color 0.18s ease;
+        }
+
+        .sp-cal-0 {
+          background: #09090b;
+        }
+
+        .sp-cal-1 {
+          background: #0a2e1a;
+        }
+
+        .sp-cal-2 {
+          background: #0e4a2a;
+        }
+
+        .sp-cal-3 {
+          background: #166534;
+        }
+
+        .sp-cal-4 {
+          background: #22c55e;
+          color: #04150b !important;
+        }
+
+        .sp-cal-selected {
+          outline: 2px solid #fafafa;
+          outline-offset: -2px;
+        }
+
+        .sp-cal-dot {
+          position: absolute;
+          right: 6px;
+          bottom: 6px;
+          width: 5px;
+          height: 5px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.85);
+        }
+      `}</style>
     </div>
   );
 }

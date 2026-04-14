@@ -14,6 +14,7 @@ export default function SignUpPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [initialAmount, setInitialAmount] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -47,7 +48,13 @@ export default function SignUpPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, otp }),
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        otp,
+        initialAmount: Number(initialAmount || 0),
+      }),
     });
 
     if (!res.ok) {
@@ -75,6 +82,14 @@ export default function SignUpPage() {
               <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required />
               <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="Initial net amount (optional)"
+                value={initialAmount}
+                onChange={(e) => setInitialAmount(e.target.value)}
+              />
               <Button className="w-full" disabled={loading}>
                 {loading ? "Sending Code..." : "Continue"}
               </Button>

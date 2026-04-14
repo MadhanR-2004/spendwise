@@ -20,7 +20,7 @@ type TransactionForm = {
 const initialState: TransactionForm = {
   amount: 0,
   type: "expense",
-  category: "Food & Dining",
+  category: "",
   date: new Date().toISOString().slice(0, 10),
   note: "",
 };
@@ -52,80 +52,137 @@ export function TransactionModal({
     if (!filteredCategories.some((item) => item.name === form.category)) {
       setForm((prev) => ({ ...prev, category: filteredCategories[0]?.name ?? "" }));
     }
-  }, [form.type, filteredCategories, form.category]);
+  }, [form.type, categories, form.category]);
 
-  const submit = async () => {
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!form.amount || !form.category || !form.date) {
-      toast.error("Please fill all required fields");
+      toast.error("Please provide amount, category, and date.");
       return;
     }
 
     setSaving(true);
-    const method = editItem ? "PUT" : "POST";
-    const endpoint = editItem ? `/api/transactions/${editItem._id}` : "/api/transactions";
+    try {
+      const method = editItem ? "PUT" : "POST";
+      const endpoint = editItem ? `/api/transactions/${editItem._id}` : "/api/transactions";
 
-    const res = await fetch(endpoint, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+      const res = await fetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-    setSaving(false);
-    if (!res.ok) {
-      toast.error("Failed to save transaction");
-      return;
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to save transaction");
+      }
+
+      toast.success(editItem ? "Transaction updated" : "Transaction added successfully!");
+      setOpen(false);
+      onSaved();
+      if (!editItem) setForm(initialState);
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setSaving(false);
     }
-
-    toast.success(editItem ? "Transaction updated" : "Transaction added");
-    setOpen(false);
-    onSaved();
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>{triggerLabel}</Button>
+        <Button className="font-semibold">{triggerLabel}</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{editItem ? "Edit Transaction" : "Add Transaction"}</DialogTitle>
-          <DialogDescription>Fill the transaction details and save.</DialogDescription>
+          <DialogTitle className="text-xl">{editItem ? "Edit Transaction" : "Add Transaction"}</DialogTitle>
+          <DialogDescription>
+            {editItem ? "Update your transaction details below." : "Enter the details of your new transaction."}
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <Input
-            type="number"
-            step="0.01"
-            placeholder="Amount"
-            value={form.amount || ""}
-            onChange={(e) => setForm((prev) => ({ ...prev, amount: Number(e.target.value) }))}
-          />
-          <Select
-            value={form.type}
-            onChange={(value) => setForm((prev) => ({ ...prev, type: value as "income" | "expense" }))}
-            options={[
-              { value: "expense", label: "Expense" },
-              { value: "income", label: "Income" },
-            ]}
-          />
-          <Select
-            value={form.category}
-            onChange={(value) => setForm((prev) => ({ ...prev, category: value }))}
-            options={filteredCategories.map((item) => ({ value: item.name, label: item.name }))}
-          />
-          <Input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
-          />
-          <Input
-            placeholder="Note / description"
-            value={form.note}
-            onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-          />
-          <Button className="w-full" onClick={submit} disabled={saving}>
-            {saving ? "Saving..." : "Submit"}
-          </Button>
-        </div>
+
+        <form onSubmit={submit} className="space-y-4 mt-4">
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-1.5">
+            <button
+              type="button"
+              className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
+                form.type === "expense"
+                  ? "bg-zinc-100 text-black shadow"
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+              }`}
+              onClick={() => setForm({ ...form, type: "expense" })}
+            >
+              Expense
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
+                form.type === "income"
+                  ? "bg-zinc-100 text-black shadow"
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+              }`}
+              onClick={() => setForm({ ...form, type: "income" })}
+            >
+              Income
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  className="pl-7"
+                  value={form.amount || ""}
+                  onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Date</label>
+              <Input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Category</label>
+            <Select
+              className="w-full h-10 border rounded-md px-3 bg-background"
+              value={form.category}
+              onChange={(value) => setForm({ ...form, category: value })}
+              options={filteredCategories.map((item) => ({ value: item.name, label: item.name }))}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Note (Optional)</label>
+            <Input
+              placeholder="What was this for?"
+              value={form.note}
+              onChange={(e) => setForm({ ...form, note: e.target.value })}
+            />
+          </div>
+
+          <div className="pt-2 flex gap-3 justify-end">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : editItem ? "Save Changes" : "Add Transaction"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -6,7 +6,9 @@ import { CategoryGrid } from "@/components/CategoryGrid";
 import { EODPanel } from "@/components/EODPanel";
 import { SpendHeatmap } from "@/components/SpendHeatmap";
 import { SummaryCards } from "@/components/SummaryCards";
+import { TransactionModal } from "@/components/TransactionModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { formatCurrency, friendlyDate } from "@/lib/utils";
 import { SummaryResponse } from "@/types";
 
@@ -15,6 +17,7 @@ export default function DashboardPage() {
   const [currency, setCurrency] = useState("INR");
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
 
   const load = async () => {
     setLoading(true);
@@ -33,6 +36,21 @@ export default function DashboardPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) return;
+        const custom = await res.json();
+        setCategories([...DEFAULT_CATEGORIES, ...custom]);
+      } catch {
+        setCategories(DEFAULT_CATEGORIES);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
   const colorMap = useMemo(() => {
     const map = new Map<string, string>();
     summary?.expenseByCategory.forEach((item) => map.set(item.name, item.color));
@@ -48,9 +66,19 @@ export default function DashboardPage() {
   if (!summary) return null;
 
   const selectedItems = selectedDate ? summary.dailyTransactions[selectedDate] ?? [] : [];
+  const selectedClosingBalance = selectedDate ? summary.dailyClosingBalances[selectedDate] : undefined;
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <TransactionModal
+          triggerLabel="Add Transaction"
+          categories={categories.map((item) => ({ name: item.name, type: item.type }))}
+          onSaved={load}
+        />
+      </div>
+
       <SummaryCards
         currency={currency}
         income={summary.totals.income}
@@ -101,7 +129,7 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Spending Activity (Last 12 Weeks)</CardTitle>
+          <CardTitle>Spending Calendar</CardTitle>
         </CardHeader>
         <CardContent>
           <SpendHeatmap
@@ -114,7 +142,8 @@ export default function DashboardPage() {
             <EODPanel
               date={selectedDate}
               items={selectedItems}
-              currency={currency}
+              currency={currency || "INR"}
+              closingBalance={selectedClosingBalance}
               onClose={() => setSelectedDate(undefined)}
               getCategoryColor={(name) => colorMap.get(name) ?? "#64748b"}
             />

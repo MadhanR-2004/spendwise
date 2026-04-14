@@ -10,12 +10,14 @@ export function EODPanel({
   date,
   items,
   currency,
+  closingBalance,
   onClose,
   getCategoryColor,
 }: {
   date: string;
   items: TransactionItem[];
   currency: string;
+  closingBalance?: number;
   onClose: () => void;
   getCategoryColor: (name: string) => string;
 }) {
@@ -46,10 +48,11 @@ export function EODPanel({
           </div>
         ))}
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+      <div className="mt-4 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
         <div>Total Income: {formatCurrency(income, currency)}</div>
         <div>Total Expense: {formatCurrency(expense, currency)}</div>
         <div>Net: {formatCurrency(net, currency)}</div>
+        <div>Closing Balance: {formatCurrency(closingBalance ?? net, currency || "INR")}</div>
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export function PopoverContent({ className, ...props }: PopoverPrimitive.Popover
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
-        className={cn("z-50 w-72 rounded-md border border-slate-200 bg-white p-3 shadow-md dark:border-slate-800 dark:bg-slate-900", className)}
+        className={cn("z-50 w-72 rounded-md border border-zinc-200 bg-white p-3 shadow-md dark:border-zinc-800 dark:bg-black", className)}
         {...props}
       />
     </PopoverPrimitive.Portal>

@@ -1,6 +1,7 @@
 import { connectToDatabase } from "@/lib/db";
 import User from "@/models/User";
 import Otp from "@/models/Otp";
+import Transaction from "@/models/Transaction";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -10,6 +11,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   otp: z.string().length(6),
+  initialAmount: z.coerce.number().min(0).optional().default(0),
 });
 
 export async function POST(req: Request) {
@@ -28,7 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
 
-    const { email, otp, name, password } = parsed.data;
+    const { email, otp, name, password, initialAmount } = parsed.data;
     
     // Check OTP
     const otpRecord = await Otp.findOne({ email, otp, type: "register", used: false });
@@ -41,12 +43,23 @@ export async function POST(req: Request) {
     await otpRecord.save();
 
     const passwordHash = await bcrypt.hash(password, 10);
-    await User.create({
+    const user = await User.create({
       name,
       email,
       passwordHash,
       currency: "INR",
     });
+
+    if (initialAmount > 0) {
+      await Transaction.create({
+        userId: user._id,
+        amount: initialAmount,
+        type: "income",
+        category: "Other Income",
+        note: "Opening balance",
+        date: new Date(),
+      });
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch {

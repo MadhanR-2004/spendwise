@@ -12,10 +12,10 @@ export const DialogClose = DialogPrimitive.Close;
 export function DialogContent({ className, children, ...props }: React.ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[95vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900",
+          "fixed left-1/2 top-1/2 z-50 w-[95vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-black",
           className
         )}
         {...props}
@@ -38,5 +38,5 @@ export function DialogTitle({ className, ...props }: React.ComponentProps<typeof
 }
 
 export function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
-  return <DialogPrimitive.Description className={cn("text-sm text-slate-500", className)} {...props} />;
+  return <DialogPrimitive.Description className={cn("text-sm text-zinc-500 dark:text-zinc-400", className)} {...props} />;
 }

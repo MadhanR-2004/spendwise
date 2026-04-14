@@ -29,5 +29,6 @@ export type SummaryResponse = {
   heatmap: { date: string; total: number }[];
   recentTransactions: TransactionItem[];
   dailyTransactions: Record<string, TransactionItem[]>;
+  dailyClosingBalances: Record<string, number>;
   monthCategoryTotals: { category: string; total: number; color: string }[];
 };

@@ -21,7 +21,7 @@ export function Select({
       onChange={(event) => onChange(event.target.value)}
       disabled={disabled}
       className={cn(
-        "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950",
+        "h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100",
         className
       )}
     >

@@ -26,14 +26,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <body className="min-h-full bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100">
         <script
           dangerouslySetInnerHTML={{
             __html: `(() => {
               const saved = localStorage.getItem('spendwise-theme');
-              if (saved === 'dark') document.documentElement.classList.add('dark');
+              const dark = saved ? saved === 'dark' : true;
+              document.documentElement.classList.toggle('dark', dark);
             })();`,
           }}
         />

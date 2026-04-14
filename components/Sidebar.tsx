@@ -33,9 +33,12 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-full border-r border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950 lg:w-64">
-      <div className="mb-8 text-xl font-bold">Spendwise</div>
-      <nav className="space-y-2">
+    <aside className="w-full border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-black lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="text-xl font-bold tracking-tight">Spendwise</div>
+      </div>
+
+      <nav className="space-y-1.5">
         {links.map((link) => {
           const Icon = link.icon;
           return (
@@ -43,10 +46,10 @@ export function Sidebar() {
               key={link.href}
               href={link.href}
               className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm",
+                "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 pathname === link.href
-                  ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
-                  : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-black"
+                  : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -55,14 +58,16 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="mt-6 flex gap-2">
-        <Button variant="outline" size="sm" onClick={toggleTheme}>
+
+      <div className="mt-6 flex flex-wrap gap-2 lg:mt-8">
+        <Button variant="outline" size="sm" onClick={toggleTheme} className="rounded-lg">
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           Theme
         </Button>
         <Button
           variant="outline"
           size="sm"
+          className="rounded-lg"
           onClick={() => signOut({ callbackUrl: "/auth/signin" })}
         >
           <LogOut className="h-4 w-4" />

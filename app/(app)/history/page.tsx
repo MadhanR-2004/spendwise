@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 import { TransactionModal } from "@/components/TransactionModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { formatCurrency, monthLabel } from "@/lib/utils";
 import { TransactionItem } from "@/types";
-import { toast } from "sonner";
 
 export default function HistoryPage() {
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
@@ -23,7 +25,6 @@ export default function HistoryPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [editItem, setEditItem] = useState<TransactionItem | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -78,29 +79,7 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <h1 className="text-2xl font-semibold">History</h1>
-        <TransactionModal
-          categories={categories.map((item) => ({ name: item.name, type: item.type }))}
-          onSaved={() => {
-            setEditItem(null);
-            fetchData();
-          }}
-          editItem={
-            editItem
-              ? {
-                  _id: editItem._id,
-                  amount: editItem.amount,
-                  category: editItem.category,
-                  type: editItem.type,
-                  date: new Date(editItem.date).toISOString().slice(0, 10),
-                  note: editItem.note,
-                }
-              : undefined
-          }
-          triggerLabel={editItem ? "Edit Transaction" : "Add Transaction"}
-        />
-      </div>
+      <h1 className="text-2xl font-semibold">History</h1>
 
       <Card>
         <CardHeader>
@@ -110,48 +89,93 @@ export default function HistoryPage() {
           <div className="grid gap-3 md:grid-cols-5">
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            <select
-              className="h-10 rounded-md border border-slate-300 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
-              <option value="all">All</option>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-            </select>
-            <Input placeholder="Search note" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <select
-              multiple
-              className="min-h-10 rounded-md border border-slate-300 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-              value={selectedCategories}
-              onChange={(e) => {
-                const values = Array.from(e.target.selectedOptions).map((option) => option.value);
-                setSelectedCategories(values);
-              }}
-            >
-              {categories.map((item) => (
-                <option key={item.name} value={item.name}>{item.name}</option>
+            <div className="grid grid-cols-3 gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-1">
+              {[
+                { key: "all", label: "All" },
+                { key: "income", label: "Income" },
+                { key: "expense", label: "Expense" },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setType(item.key)}
+                  className={`rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+                    type === item.key
+                      ? "bg-zinc-100 text-black"
+                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+                  }`}
+                >
+                  {item.label}
+                </button>
               ))}
-            </select>
+            </div>
+            <Input placeholder="Search note" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="justify-between border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900 hover:text-white"
+                >
+                  {selectedCategories.length ? `${selectedCategories.length} categories selected` : "Filter categories"}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="max-h-64 overflow-auto border-zinc-800 bg-black">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-medium text-zinc-400">Categories</p>
+                  <button
+                    type="button"
+                    className="text-xs text-zinc-400 hover:text-white"
+                    onClick={() => setSelectedCategories([])}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {categories.map((item) => {
+                    const checked = selectedCategories.includes(item.name);
+                    return (
+                      <label
+                        key={item.name}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-zinc-900"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-zinc-600 bg-zinc-950 accent-zinc-200"
+                          checked={checked}
+                          onChange={() => {
+                            setSelectedCategories((prev) =>
+                              checked ? prev.filter((name) => name !== item.name) : [...prev, item.name]
+                            );
+                          }}
+                        />
+                        <span>{item.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>
 
       <Tabs defaultValue="table">
-        <TabsList>
+        <TabsList className="mt-2">
           <TabsTrigger value="table">Table View</TabsTrigger>
           <TabsTrigger value="monthly">Monthly Grouped</TabsTrigger>
         </TabsList>
+
         <TabsContent value="table">
           <Card>
             <CardContent className="pt-4">
               {loading ? (
-                <div className="h-24 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+                <div className="h-24 animate-pulse rounded bg-zinc-900" />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-800">
+                      <tr className="border-b border-zinc-800 text-zinc-200">
                         <th className="p-2">Date</th>
                         <th className="p-2">Category</th>
                         <th className="p-2">Note</th>
@@ -162,17 +186,31 @@ export default function HistoryPage() {
                     </thead>
                     <tbody>
                       {transactions.map((item) => (
-                        <tr key={item._id} className="border-b border-slate-200 dark:border-slate-800">
+                        <tr key={item._id} className="border-b border-zinc-900 text-zinc-300">
                           <td className="p-2">{new Date(item.date).toLocaleDateString()}</td>
                           <td className="p-2">{item.category}</td>
                           <td className="p-2">{item.note || "-"}</td>
                           <td className="p-2">{item.type}</td>
-                          <td className={`p-2 ${item.type === "income" ? "text-green-600" : "text-red-600"}`}>
+                          <td className={`p-2 ${item.type === "income" ? "text-green-500" : "text-red-500"}`}>
                             {formatCurrency(item.amount, currency)}
                           </td>
                           <td className="p-2 space-x-2">
-                            <Button size="sm" variant="outline" onClick={() => setEditItem(item)}>Edit</Button>
-                            <Button size="sm" variant="destructive" onClick={() => remove(item._id)}>Delete</Button>
+                            <TransactionModal
+                              triggerLabel="Edit"
+                              categories={categories.map((cat) => ({ name: cat.name, type: cat.type }))}
+                              onSaved={fetchData}
+                              editItem={{
+                                _id: item._id,
+                                amount: item.amount,
+                                category: item.category,
+                                type: item.type,
+                                date: new Date(item.date).toISOString().slice(0, 10),
+                                note: item.note,
+                              }}
+                            />
+                            <Button size="sm" variant="destructive" onClick={() => remove(item._id)}>
+                              Delete
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -180,14 +218,20 @@ export default function HistoryPage() {
                   </table>
                 </div>
               )}
+
               <div className="mt-3 flex items-center justify-end gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Prev</Button>
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                  Prev
+                </Button>
                 <span className="text-sm">{page} / {pages}</span>
-                <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+                <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
+                  Next
+                </Button>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
+
         <TabsContent value="monthly">
           <Card>
             <CardContent className="space-y-4 pt-4">
@@ -197,13 +241,17 @@ export default function HistoryPage() {
                   <div key={month}>
                     <div className="mb-2 flex items-center justify-between">
                       <h3 className="font-semibold">{month}</h3>
-                      <span className={subtotal >= 0 ? "text-green-600" : "text-red-600"}>{formatCurrency(subtotal, currency)}</span>
+                      <span className={subtotal >= 0 ? "text-green-500" : "text-red-500"}>
+                        {formatCurrency(subtotal, currency)}
+                      </span>
                     </div>
                     <div className="space-y-2">
                       {items.map((item) => (
-                        <div key={item._id} className="flex items-center justify-between rounded-md border border-slate-200 p-2 text-sm dark:border-slate-800">
+                        <div key={item._id} className="flex items-center justify-between rounded-md border border-zinc-800 p-2 text-sm">
                           <div>{item.category} - {item.note || "-"}</div>
-                          <div className={item.type === "income" ? "text-green-600" : "text-red-600"}>{formatCurrency(item.amount, currency)}</div>
+                          <div className={item.type === "income" ? "text-green-500" : "text-red-500"}>
+                            {formatCurrency(item.amount, currency)}
+                          </div>
                         </div>
                       ))}
                     </div>

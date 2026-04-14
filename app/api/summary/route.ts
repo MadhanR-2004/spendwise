@@ -19,11 +19,12 @@ export async function GET() {
   const heatmapStart = startOfWeek(subWeeks(now, 11), { weekStartsOn: 0 });
   const heatmapEnd = endOfWeek(now, { weekStartsOn: 0 });
 
-  const [monthTransactions, heatmapTransactions, recentTransactions, categoryMap] = await Promise.all([
+  const [monthTransactions, heatmapTransactions, recentTransactions, categoryMap, allTransactionsUntilEnd] = await Promise.all([
     Transaction.find({ userId, date: { $gte: monthStart, $lte: monthEnd } }).lean(),
     Transaction.find({ userId, date: { $gte: heatmapStart, $lte: heatmapEnd } }).lean(),
     Transaction.find({ userId }).sort({ date: -1, createdAt: -1 }).limit(10).lean(),
     getCategoryMap(userId),
+    Transaction.find({ userId, date: { $lte: heatmapEnd } }).sort({ date: 1, createdAt: 1 }).lean(),
   ]);
 
   const totals = monthTransactions.reduce(
@@ -76,6 +77,21 @@ export async function GET() {
 
   const daySpendMap = new Map<string, number>();
   const dailyTransactions: Record<string, typeof heatmapTransactions> = {};
+  const closingBalanceByDayMap = new Map<string, number>();
+
+  let runningBalance = 0;
+  let balanceBeforeHeatmapStart = 0;
+  for (const transaction of allTransactionsUntilEnd) {
+    const delta = transaction.type === "income" ? transaction.amount : -transaction.amount;
+    runningBalance += delta;
+
+    if (new Date(transaction.date) < heatmapStart) {
+      balanceBeforeHeatmapStart = runningBalance;
+    }
+
+    const key = toDateKey(transaction.date);
+    closingBalanceByDayMap.set(key, runningBalance);
+  }
 
   for (const transaction of heatmapTransactions) {
     const key = toDateKey(transaction.date);
@@ -87,13 +103,21 @@ export async function GET() {
   }
 
   const heatmap: { date: string; total: number }[] = [];
+  const dailyClosingBalances: Record<string, number> = {};
+  let lastKnownBalance = balanceBeforeHeatmapStart;
+
   for (
     let cursor = new Date(heatmapStart);
     cursor <= heatmapEnd;
     cursor = new Date(cursor.setDate(cursor.getDate() + 1))
   ) {
     const key = toDateKey(cursor);
+    if (closingBalanceByDayMap.has(key)) {
+      lastKnownBalance = closingBalanceByDayMap.get(key) ?? lastKnownBalance;
+    }
+
     heatmap.push({ date: key, total: daySpendMap.get(key) ?? 0 });
+    dailyClosingBalances[key] = lastKnownBalance;
   }
 
   return NextResponse.json({
@@ -108,6 +132,7 @@ export async function GET() {
     heatmap,
     recentTransactions,
     dailyTransactions,
+    dailyClosingBalances,
     monthCategoryTotals,
   });
 }
