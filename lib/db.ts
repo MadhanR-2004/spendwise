@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB = process.env.MONGODB_DB ?? "spendwise";
 
 function getMongoUri() {
   if (!MONGODB_URI) {
@@ -30,6 +31,7 @@ export async function connectToDatabase() {
   if (!cached.promise) {
     cached.promise = mongoose.connect(getMongoUri(), {
       bufferCommands: false,
+      dbName: MONGODB_DB,
     });
   }
 
