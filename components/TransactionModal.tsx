@@ -91,7 +91,7 @@ export function TransactionModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="font-semibold">{triggerLabel}</Button>
+        <Button className="relative overflow-hidden rounded-xl border border-white/20 bg-white/10 font-semibold text-zinc-900 backdrop-blur-xl transition-all hover:border-white/30 hover:bg-white/20 dark:border-white/[0.1] dark:bg-white/[0.06] dark:text-zinc-100 dark:hover:bg-white/[0.1] dark:hover:border-white/[0.15]">{triggerLabel}</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

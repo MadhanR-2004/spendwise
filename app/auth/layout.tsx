@@ -7,5 +7,5 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     redirect("/dashboard");
   }
 
-  return <div className="bg-slate-50 dark:bg-slate-950">{children}</div>;
+  return <div className="bg-zinc-50 dark:bg-zinc-950">{children}</div>;
 }

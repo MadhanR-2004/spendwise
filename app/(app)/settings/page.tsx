@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { CURRENCIES, DEFAULT_CATEGORIES } from "@/lib/constants";
+import { ConfirmDialog, useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
 type CustomCategory = {
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [newCategory, setNewCategory] = useState({ name: "", color: "#14b8a6", type: "expense" as "income" | "expense" });
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const confirm = useConfirm();
 
   const load = async () => {
     const [sessionRes, categoryRes] = await Promise.all([fetch("/api/auth/session"), fetch("/api/categories")]);
@@ -80,8 +82,6 @@ export default function SettingsPage() {
   };
 
   const deleteAllData = async () => {
-    const confirmed = window.confirm("Delete all transactions and custom categories?");
-    if (!confirmed) return;
     const res = await fetch("/api/user", { method: "DELETE" });
     if (!res.ok) return toast.error("Failed to delete data");
     toast.success("All data deleted");
@@ -89,6 +89,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialog {...confirm.dialogProps} />
       <h1 className="text-2xl font-semibold">Settings</h1>
 
       <Card>
@@ -132,14 +133,14 @@ export default function SettingsPage() {
             {[...DEFAULT_CATEGORIES.map((item) => ({ ...item, _id: item.name })), ...customCategories].map((category) => {
               const isDefault = DEFAULT_CATEGORIES.some((item) => item.name === category.name);
               return (
-                <div key={category._id} className="flex items-center justify-between rounded-md border border-slate-200 p-2 dark:border-slate-800">
+                <div key={category._id} className="flex items-center justify-between rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: category.color }} />
-                    <span>{category.name}</span>
-                    <span className="text-slate-500">{category.type}</span>
+                    <span className="text-zinc-900 dark:text-zinc-100">{category.name}</span>
+                    <span className="text-zinc-500 dark:text-zinc-400">{category.type}</span>
                   </div>
                   {!isDefault && (
-                    <Button variant="destructive" size="sm" onClick={() => deleteCategory(category._id)}>Delete</Button>
+                    <Button variant="destructive" size="sm" onClick={() => confirm.open(() => deleteCategory(category._id), { title: "Delete category?", description: `"${category.name}" will be permanently removed.`, confirmLabel: "Delete" })}>Delete</Button>
                   )}
                 </div>
               );
@@ -160,7 +161,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader><CardTitle>Danger Zone</CardTitle></CardHeader>
         <CardContent>
-          <Button variant="destructive" onClick={deleteAllData}>Delete all data</Button>
+          <Button variant="destructive" onClick={() => confirm.open(deleteAllData, { title: "Delete all data?", description: "All your transactions and custom categories will be permanently deleted. This cannot be undone.", confirmLabel: "Delete Everything" })}>Delete all data</Button>
         </CardContent>
       </Card>
     </div>

@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { formatCurrency, monthLabel } from "@/lib/utils";
+import { ConfirmDialog, useConfirm } from "@/components/ui/confirm-dialog";
 import { TransactionItem } from "@/types";
 
 export default function HistoryPage() {
@@ -25,6 +26,7 @@ export default function HistoryPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
+  const confirm = useConfirm();
 
   const fetchData = async () => {
     setLoading(true);
@@ -79,6 +81,7 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialog {...confirm.dialogProps} />
       <h1 className="text-2xl font-semibold">History</h1>
 
       <Card>
@@ -89,7 +92,7 @@ export default function HistoryPage() {
           <div className="grid gap-3 md:grid-cols-5">
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            <div className="grid grid-cols-3 gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-1">
+            <div className="grid grid-cols-3 gap-1 rounded-md border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
               {[
                 { key: "all", label: "All" },
                 { key: "income", label: "Income" },
@@ -101,8 +104,8 @@ export default function HistoryPage() {
                   onClick={() => setType(item.key)}
                   className={`rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
                     type === item.key
-                      ? "bg-zinc-100 text-black"
-                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+                      ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-100 dark:text-black"
+                      : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                   }`}
                 >
                   {item.label}
@@ -114,18 +117,18 @@ export default function HistoryPage() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="justify-between border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900 hover:text-white"
+                  className="justify-between"
                 >
                   {selectedCategories.length ? `${selectedCategories.length} categories selected` : "Filter categories"}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="max-h-64 overflow-auto border-zinc-800 bg-black">
+              <PopoverContent align="end" className="max-h-64 overflow-auto border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-xs font-medium text-zinc-400">Categories</p>
+                  <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Categories</p>
                   <button
                     type="button"
-                    className="text-xs text-zinc-400 hover:text-white"
+                    className="text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
                     onClick={() => setSelectedCategories([])}
                   >
                     Clear
@@ -137,11 +140,11 @@ export default function HistoryPage() {
                     return (
                       <label
                         key={item.name}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-zinc-900"
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
                       >
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-zinc-600 bg-zinc-950 accent-zinc-200"
+                          className="h-4 w-4 rounded border-zinc-300 accent-indigo-600 dark:border-zinc-600 dark:accent-zinc-200"
                           checked={checked}
                           onChange={() => {
                             setSelectedCategories((prev) =>
@@ -166,16 +169,16 @@ export default function HistoryPage() {
           <TabsTrigger value="monthly">Monthly Grouped</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="table">
+        <TabsContent value="table" className="mt-4">
           <Card>
             <CardContent className="pt-4">
               {loading ? (
-                <div className="h-24 animate-pulse rounded bg-zinc-900" />
+                <div className="h-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-zinc-800 text-zinc-200">
+                      <tr className="border-b border-zinc-200 text-zinc-600 dark:border-zinc-800 dark:text-zinc-300">
                         <th className="p-2">Date</th>
                         <th className="p-2">Category</th>
                         <th className="p-2">Note</th>
@@ -186,7 +189,7 @@ export default function HistoryPage() {
                     </thead>
                     <tbody>
                       {transactions.map((item) => (
-                        <tr key={item._id} className="border-b border-zinc-900 text-zinc-300">
+                        <tr key={item._id} className="border-b border-zinc-100 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
                           <td className="p-2">{new Date(item.date).toLocaleDateString()}</td>
                           <td className="p-2">{item.category}</td>
                           <td className="p-2">{item.note || "-"}</td>
@@ -208,7 +211,7 @@ export default function HistoryPage() {
                                 note: item.note,
                               }}
                             />
-                            <Button size="sm" variant="destructive" onClick={() => remove(item._id)}>
+                            <Button size="sm" variant="destructive" onClick={() => confirm.open(() => remove(item._id), { title: "Delete transaction?", description: "This transaction will be permanently removed." , confirmLabel: "Delete" })}>
                               Delete
                             </Button>
                           </td>
@@ -232,7 +235,7 @@ export default function HistoryPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="monthly">
+        <TabsContent value="monthly" className="mt-4">
           <Card>
             <CardContent className="space-y-4 pt-4">
               {Object.entries(grouped).map(([month, items]) => {
@@ -247,7 +250,7 @@ export default function HistoryPage() {
                     </div>
                     <div className="space-y-2">
                       {items.map((item) => (
-                        <div key={item._id} className="flex items-center justify-between rounded-md border border-zinc-800 p-2 text-sm">
+                        <div key={item._id} className="flex items-center justify-between rounded-md border border-zinc-200 p-2 text-sm dark:border-zinc-800">
                           <div>{item.category} - {item.note || "-"}</div>
                           <div className={item.type === "income" ? "text-green-500" : "text-red-500"}>
                             {formatCurrency(item.amount, currency)}

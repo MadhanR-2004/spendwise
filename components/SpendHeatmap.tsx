@@ -1,11 +1,25 @@
 "use client";
 
-import { useMemo } from "react";
-import Calendar from "react-calendar";
-import { format, parseISO } from "date-fns";
-import "react-calendar/dist/Calendar.css";
+import { useCallback, useMemo, useState } from "react";
+import {
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  format,
+  isSameMonth,
+  isToday,
+  eachDayOfInterval,
+} from "date-fns";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 type HeatItem = { date: string; total: number };
+
+const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function SpendHeatmap({
   data,
@@ -18,25 +32,8 @@ export function SpendHeatmap({
   onSelect: (date: string) => void;
   currency: string;
 }) {
-  const max = Math.max(...data.map((item) => item.total), 0);
-
-  const toDateKey = (value: Date | string) => {
-    if (typeof value === "string") {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-      return format(parseISO(value), "yyyy-MM-dd");
-    }
-    return format(value, "yyyy-MM-dd");
-  };
-
-  const getIntensity = (total: number) => {
-    if (!total || total <= 0) return 0;
-    if (max <= 0) return 0;
-    const ratio = total / max;
-    if (ratio <= 0.25) return 1;
-    if (ratio <= 0.5) return 2;
-    if (ratio <= 0.75) return 3;
-    return 4;
-  };
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const max = Math.max(...data.map((item) => item.total), 1);
 
   const spendMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -44,126 +41,132 @@ export function SpendHeatmap({
     return map;
   }, [data]);
 
-  const selectedDateValue = selectedDate ? parseISO(selectedDate) : new Date();
+  const days = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const calStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+    const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+    return eachDayOfInterval({ start: calStart, end: calEnd });
+  }, [currentMonth]);
+
+  const getIntensity = useCallback(
+    (total: number) => {
+      if (!total || total <= 0) return 0;
+      const ratio = total / max;
+      if (ratio <= 0.25) return 1;
+      if (ratio <= 0.5) return 2;
+      if (ratio <= 0.75) return 3;
+      return 4;
+    },
+    [max]
+  );
+
+  const intensityClasses: Record<number, string> = {
+    0: "bg-zinc-100 dark:bg-white/[0.03]",
+    1: "bg-emerald-100 dark:bg-emerald-500/10",
+    2: "bg-emerald-200 dark:bg-emerald-500/20",
+    3: "bg-emerald-400/60 dark:bg-emerald-500/35",
+    4: "bg-emerald-500 dark:bg-emerald-400/60 text-white dark:text-emerald-100",
+  };
 
   return (
-    <div className="w-full pb-3">
-      <Calendar
-        value={selectedDateValue}
-        onChange={(value) => {
-          const picked = Array.isArray(value) ? value[0] : value;
-          if (picked) onSelect(toDateKey(picked));
-        }}
-        tileClassName={({ date, view }) => {
-          if (view !== "month") return "";
-          const key = toDateKey(date);
+    <div className="w-full select-none">
+      {/* Month navigation */}
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
+          className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <h4 className="text-sm font-semibold tracking-wide">
+          {format(currentMonth, "MMMM yyyy")}
+        </h4>
+        <button
+          type="button"
+          onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
+          className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Weekday headers */}
+      <div className="mb-1 grid grid-cols-7 text-center">
+        {weekdays.map((d) => (
+          <div
+            key={d}
+            className="py-1 text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500"
+          >
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Day grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((day) => {
+          const key = format(day, "yyyy-MM-dd");
           const total = spendMap.get(key) ?? 0;
           const level = getIntensity(total);
-          const selected = selectedDate === key ? "sp-cal-selected" : "";
-          return `sp-cal-tile sp-cal-${level} ${selected}`;
-        }}
-        tileContent={({ date, view }) => {
-          if (view !== "month") return null;
-          const key = toDateKey(date);
-          const total = spendMap.get(key) ?? 0;
-          if (total <= 0) return null;
+          const inMonth = isSameMonth(day, currentMonth);
+          const today = isToday(day);
+          const selected = selectedDate === key;
 
-          const formatted = new Intl.NumberFormat("en-IN", {
-            style: "currency",
-            currency,
-            maximumFractionDigits: 0,
-          }).format(total);
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onSelect(key)}
+              className={cn(
+                "relative flex aspect-square flex-col items-center justify-center rounded-xl text-xs font-medium transition-all duration-200",
+                inMonth
+                  ? intensityClasses[level]
+                  : "bg-transparent text-zinc-300 dark:text-zinc-700",
+                today &&
+                  "ring-1 ring-indigo-500/50 ring-offset-1 ring-offset-white dark:ring-offset-black",
+                selected &&
+                  "ring-2 ring-white shadow-lg dark:ring-zinc-300",
+                inMonth &&
+                  "hover:scale-105 hover:shadow-md cursor-pointer"
+              )}
+              title={
+                total > 0
+                  ? `${format(day, "PPP")}: ${formatCurrency(total, currency)}`
+                  : format(day, "PPP")
+              }
+            >
+              <span
+                className={cn(
+                  "text-[13px] leading-none",
+                  !inMonth && "opacity-30"
+                )}
+              >
+                {format(day, "d")}
+              </span>
+              {total > 0 && inMonth && (
+                <span className="mt-0.5 h-1 w-1 rounded-full bg-current opacity-70" />
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-          return <span className="sp-cal-dot" title={`${format(date, "PPP")}: ${formatted}`} />;
-        }}
-      />
-
-      <style jsx global>{`
-        .react-calendar {
-          width: 100%;
-          border: 1px solid #27272a;
-          border-radius: 12px;
-          background: #000;
-          color: #f4f4f5;
-          padding: 14px;
-          font-family: inherit;
-        }
-
-        .react-calendar button {
-          color: #f4f4f5;
-          border-radius: 10px;
-          border: 1px solid transparent;
-        }
-
-        .react-calendar__navigation button {
-          min-width: 42px;
-          background: transparent;
-          font-weight: 600;
-          color: #f4f4f5;
-        }
-
-        .react-calendar__navigation button:enabled:hover,
-        .react-calendar__navigation button:enabled:focus,
-        .react-calendar__tile:enabled:hover,
-        .react-calendar__tile:enabled:focus {
-          background: #18181b;
-        }
-
-        .react-calendar__month-view__weekdays__weekday {
-          color: #a1a1aa;
-          font-size: 12px;
-        }
-
-        .react-calendar__month-view__weekdays__weekday abbr {
-          text-decoration: none;
-        }
-
-        .react-calendar__month-view__days__day--neighboringMonth {
-          color: #52525b;
-        }
-
-        .sp-cal-tile {
-          position: relative;
-          cursor: pointer;
-          transition: background-color 0.18s ease;
-        }
-
-        .sp-cal-0 {
-          background: #09090b;
-        }
-
-        .sp-cal-1 {
-          background: #0a2e1a;
-        }
-
-        .sp-cal-2 {
-          background: #0e4a2a;
-        }
-
-        .sp-cal-3 {
-          background: #166534;
-        }
-
-        .sp-cal-4 {
-          background: #22c55e;
-          color: #04150b !important;
-        }
-
-        .sp-cal-selected {
-          outline: 2px solid #fafafa;
-          outline-offset: -2px;
-        }
-
-        .sp-cal-dot {
-          position: absolute;
-          right: 6px;
-          bottom: 6px;
-          width: 5px;
-          height: 5px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.85);
-        }
-      `}</style>
+      {/* Legend */}
+      <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+        <span>Less</span>
+        {[0, 1, 2, 3, 4].map((level) => (
+          <div
+            key={level}
+            className={cn(
+              "h-3 w-3 rounded",
+              intensityClasses[level]
+            )}
+          />
+        ))}
+        <span>More</span>
+      </div>
     </div>
   );
 }

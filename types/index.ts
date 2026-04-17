@@ -32,3 +32,43 @@ export type SummaryResponse = {
   dailyClosingBalances: Record<string, number>;
   monthCategoryTotals: { category: string; total: number; color: string }[];
 };
+
+export type BudgetItem = {
+  _id: string;
+  name: string;
+  amount: number;
+  period: "weekly" | "monthly";
+  category: string | null;
+  color: string;
+  alertThreshold: number;
+  spent: number;
+};
+
+export type SavingsGoalItem = {
+  _id: string;
+  name: string;
+  targetAmount: number;
+  savedAmount: number;
+  deadline: string | null;
+  color: string;
+  icon: string;
+};
+
+export type AnalyticsResponse = {
+  dailySpending: { date: string; income: number; expense: number }[];
+  categoryComparison: {
+    category: string;
+    thisMonth: number;
+    lastMonth: number;
+    change: number;
+    color: string;
+  }[];
+  monthComparison: {
+    thisMonth: { income: number; expense: number };
+    lastMonth: { income: number; expense: number };
+  };
+  insights: { type: "warning" | "success" | "info"; message: string }[];
+  avgDailySpend: number;
+  projectedMonthlySpend: number;
+  topCategory: { name: string; amount: number } | null;
+};

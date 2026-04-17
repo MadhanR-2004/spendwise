@@ -1,5 +1,7 @@
+import crypto from "crypto";
 import { connectToDatabase } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { rateLimitByIp } from "@/lib/rate-limit";
 import Otp from "@/models/Otp";
 import User from "@/models/User";
 import { NextResponse } from "next/server";
@@ -11,6 +13,14 @@ const otpSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const { success } = rateLimitByIp(req, "otp", 5, 60_000);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again later." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await req.json();
     const parsed = otpSchema.safeParse(body);
@@ -32,8 +42,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email not found" }, { status: 404 });
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Invalidate any previous unused OTPs for this email+type
+    await Otp.deleteMany({ email, type, used: false });
+
+    // Generate cryptographically secure 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
 
     // Save to DB

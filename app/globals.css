@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,26 +27,16 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.heat-0 {
-  background: #e2e8f0;
-}
-
-.heat-1 {
-  background: #c7d2fe;
-}
-
-.heat-2 {
-  background: #a5b4fc;
-}
-
-.heat-3 {
-  background: #818cf8;
-}
-
-.heat-4 {
-  background: #4f46e5;
+/* Add bottom padding on mobile so content isn't hidden behind the FAB */
+@media (max-width: 1023px) {
+  main {
+    padding-bottom: 2rem !important;
+  }
 }
 
 .dark .heat-0 {

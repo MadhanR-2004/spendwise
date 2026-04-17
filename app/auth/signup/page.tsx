@@ -18,27 +18,47 @@ export default function SignUpPage() {
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
-  const requestOtp = async (event: FormEvent) => {
-    event.preventDefault();
+  const startCooldown = () => {
+    setResendCooldown(30);
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) { clearInterval(interval); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const sendOtp = async () => {
     setLoading(true);
-    
     const res = await fetch("/api/auth/otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, type: "register" }),
     });
-    
     setLoading(false);
-    
+
     if (!res.ok) {
       const data = await res.json();
       toast.error(data.error || "Failed to send verification code");
-      return;
+      return false;
     }
-    
+
     toast.success("Verification code sent to your email");
-    setStep(2);
+    startCooldown();
+    return true;
+  };
+
+  const requestOtp = async (event: FormEvent) => {
+    event.preventDefault();
+    const ok = await sendOtp();
+    if (ok) setStep(2);
+  };
+
+  const resendOtp = async () => {
+    if (resendCooldown > 0) return;
+    await sendOtp();
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -96,7 +116,7 @@ export default function SignUpPage() {
             </form>
           ) : (
             <form className="space-y-3" onSubmit={onSubmit}>
-              <p className="text-sm text-slate-500 mb-4">Enter the 6-digit code sent to {email}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">Enter the 6-digit code sent to {email}</p>
               <Input type="text" placeholder="6-digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} required minLength={6} maxLength={6} />
               <div className="flex gap-2">
                 <Button type="button" variant="outline" className="w-full" onClick={() => setStep(1)}>Back</Button>
@@ -104,10 +124,18 @@ export default function SignUpPage() {
                   {loading ? "Creating..." : "Create Account"}
                 </Button>
               </div>
+              <button
+                type="button"
+                onClick={resendOtp}
+                disabled={resendCooldown > 0 || loading}
+                className="w-full text-center text-sm text-indigo-600 hover:text-indigo-500 disabled:text-zinc-400 disabled:cursor-not-allowed"
+              >
+                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn\u2019t receive the code? Resend"}
+              </button>
             </form>
           )}
           {step === 1 && (
-            <p className="mt-4 text-sm text-slate-500">
+            <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
               Have an account? <Link href="/auth/signin" className="text-indigo-600">Sign in</Link>
             </p>
           )}

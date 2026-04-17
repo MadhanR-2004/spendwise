@@ -60,7 +60,7 @@ export default function DashboardPage() {
   }, [summary]);
 
   if (loading) {
-    return <div className="h-40 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />;
+    return <div className="h-40 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />;
   }
 
   if (!summary) return null;
@@ -100,7 +100,10 @@ export default function DashboardPage() {
                     <Cell key={entry.name} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => formatCurrency(Number(value ?? 0), currency)} />
+                <Tooltip
+                  formatter={(value) => formatCurrency(Number(value ?? 0), currency)}
+                  contentStyle={{ backgroundColor: "rgba(255,255,255,0.95)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", color: "#18181b" }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -118,7 +121,10 @@ export default function DashboardPage() {
                     <Cell key={entry.name} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => formatCurrency(Number(value ?? 0), currency)} />
+                <Tooltip
+                  formatter={(value) => formatCurrency(Number(value ?? 0), currency)}
+                  contentStyle={{ backgroundColor: "rgba(255,255,255,0.95)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", color: "#18181b" }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -158,13 +164,13 @@ export default function DashboardPage() {
         <CardContent>
           <div className="space-y-2">
             {summary.recentTransactions.map((item) => (
-              <div key={item._id} className="flex items-center justify-between rounded-md border border-slate-200 p-3 text-sm dark:border-slate-800">
+              <div key={item._id} className="flex items-center justify-between rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-800">
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colorMap.get(item.category) ?? "#64748b" }} />
-                  <span>{item.note || item.category}</span>
-                  <span className="text-slate-500">{friendlyDate(item.date)}</span>
+                  <span className="text-zinc-900 dark:text-zinc-100">{item.note || item.category}</span>
+                  <span className="text-zinc-500 dark:text-zinc-400">{friendlyDate(item.date)}</span>
                 </div>
-                <span className={item.type === "income" ? "text-green-600" : "text-red-600"}>
+                <span className={item.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
                   {item.type === "income" ? "+" : "-"}
                   {formatCurrency(item.amount, currency)}
                 </span>

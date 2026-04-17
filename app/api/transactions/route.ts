@@ -48,7 +48,8 @@ export async function GET(req: Request) {
     }
 
     if (search) {
-      filter.note = { $regex: search, $options: "i" };
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.note = { $regex: escaped, $options: "i" };
     }
 
     const total = await Transaction.countDocuments(filter);

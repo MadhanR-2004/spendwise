@@ -5,7 +5,7 @@ function Separator({ orientation = "horizontal" }: { orientation?: "horizontal" 
     <SeparatorPrimitive.Root
       decorative
       orientation={orientation}
-      className={orientation === "horizontal" ? "h-px w-full bg-slate-200 dark:bg-slate-800" : "h-full w-px bg-slate-200 dark:bg-slate-800"}
+      className={orientation === "horizontal" ? "h-px w-full bg-zinc-200 dark:bg-zinc-800" : "h-full w-px bg-zinc-200 dark:bg-zinc-800"}
     />
   );
 }

@@ -52,7 +52,7 @@ export default function SignInPage() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          <p className="mt-4 text-sm text-slate-500">
+          <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
             No account? <Link href="/auth/signup" className="text-indigo-600">Sign up</Link>
           </p>
         </CardContent>

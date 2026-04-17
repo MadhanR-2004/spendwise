@@ -4,8 +4,8 @@ import { ChartColumn, ShieldCheck, Wallet } from "lucide-react";
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4 md:px-6 dark:border-slate-800">
+    <div className="flex min-h-screen flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-200 px-4 md:px-6 dark:border-zinc-800">
         <Link href="/" className="flex items-center gap-2">
           <Wallet className="h-6 w-6 text-indigo-600" />
           <span className="text-xl font-bold tracking-tight">Spendwise</span>
@@ -27,7 +27,7 @@ export default function LandingPage() {
               <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl/none max-w-3xl">
                 Take Control of Your <span className="text-indigo-600">Finances</span> Today
               </h1>
-              <p className="mx-auto max-w-[700px] text-slate-500 md:text-xl dark:text-slate-400">
+              <p className="mx-auto max-w-[700px] text-zinc-500 md:text-xl dark:text-zinc-400">
                 Spendwise is the simplest way to track your daily expenses, monitor your net balance, and achieve your saving goals without complex banking APIs.
               </p>
               <div className="space-x-4 mt-6">
@@ -41,7 +41,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-50 dark:bg-slate-900">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-zinc-50 dark:bg-zinc-900">
           <div className="container px-4 md:px-6 mx-auto">
             <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 items-start justify-center text-center">
               <div className="flex flex-col items-center space-y-3">
@@ -49,7 +49,7 @@ export default function LandingPage() {
                   <ChartColumn className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-bold">Deep Insights</h3>
-                <p className="text-slate-500 dark:text-slate-400">
+                <p className="text-zinc-500 dark:text-zinc-400">
                   Visualize your spending habits with intuitive charts and GitHub-style heatmaps.
                 </p>
               </div>
@@ -58,7 +58,7 @@ export default function LandingPage() {
                   <ShieldCheck className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-bold">Private & Secure</h3>
-                <p className="text-slate-500 dark:text-slate-400">
+                <p className="text-zinc-500 dark:text-zinc-400">
                   No bank connections or third-party data tracking. Your transactions remain manual and private.
                 </p>
               </div>
@@ -67,7 +67,7 @@ export default function LandingPage() {
                   <Wallet className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-bold">Easy Management</h3>
-                <p className="text-slate-500 dark:text-slate-400">
+                <p className="text-zinc-500 dark:text-zinc-400">
                   Create custom categories, group transactions by month, and export to CSV in one click.
                 </p>
               </div>
@@ -76,8 +76,8 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t border-slate-200 dark:border-slate-800">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t border-zinc-200 dark:border-zinc-800">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
           © {new Date().getFullYear()} Spendwise. All rights reserved.
         </p>
       </footer>

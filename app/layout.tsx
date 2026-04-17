@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,15 +29,17 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100">
+      <body className="min-h-full bg-zinc-50 text-zinc-900 transition-colors duration-300 dark:bg-black dark:text-zinc-100">
         <script
           dangerouslySetInnerHTML={{
             __html: `(() => {
-              const saved = localStorage.getItem('spendwise-theme');
-              const dark = saved ? saved === 'dark' : true;
-              document.documentElement.classList.toggle('dark', dark);
+              try {
+                const saved = localStorage.getItem('spendwise-theme');
+                const dark = saved ? saved === 'dark' : true;
+                document.documentElement.classList.toggle('dark', dark);
+              } catch(e) {}
             })();`,
           }}
         />

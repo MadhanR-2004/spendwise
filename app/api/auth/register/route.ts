@@ -1,4 +1,5 @@
 import { connectToDatabase } from "@/lib/db";
+import { rateLimitByIp } from "@/lib/rate-limit";
 import User from "@/models/User";
 import Otp from "@/models/Otp";
 import Transaction from "@/models/Transaction";
@@ -15,6 +16,14 @@ const registerSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const { success } = rateLimitByIp(req, "register", 5, 60_000);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again later." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await req.json();
     const parsed = registerSchema.safeParse(body);
@@ -33,7 +42,7 @@ export async function POST(req: Request) {
     const { email, otp, name, password, initialAmount } = parsed.data;
     
     // Check OTP
-    const otpRecord = await Otp.findOne({ email, otp, type: "register", used: false });
+    const otpRecord = await Otp.findOne({ email, otp, type: "register", used: false, expiresAt: { $gt: new Date() } });
     if (!otpRecord) {
       return NextResponse.json({ error: "Invalid or expired verification code" }, { status: 400 });
     }

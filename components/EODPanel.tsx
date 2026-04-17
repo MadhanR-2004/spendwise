@@ -26,9 +26,9 @@ export function EODPanel({
   const net = income - expense;
 
   return (
-    <div className="mt-4 animate-in slide-in-from-top-2 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+    <div className="mt-4 animate-in slide-in-from-top-2 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-base font-semibold">{format(new Date(date), "EEEE, d MMMM yyyy")}</h3>
+        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{format(new Date(date), "EEEE, d MMMM yyyy")}</h3>
         <Button size="icon" variant="ghost" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
@@ -38,21 +38,21 @@ export function EODPanel({
           <div key={item._id} className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getCategoryColor(item.category) }} />
-              <span>{item.category}</span>
-              <span className="text-slate-500">{item.note || "-"}</span>
+              <span className="text-zinc-800 dark:text-zinc-200">{item.category}</span>
+              <span className="text-zinc-500 dark:text-zinc-400">{item.note || "-"}</span>
             </div>
-            <span className={item.type === "income" ? "text-green-600" : "text-red-600"}>
+            <span className={item.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
               {item.type === "income" ? "+" : "-"}
               {formatCurrency(item.amount, currency)}
             </span>
           </div>
         ))}
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-        <div>Total Income: {formatCurrency(income, currency)}</div>
-        <div>Total Expense: {formatCurrency(expense, currency)}</div>
-        <div>Net: {formatCurrency(net, currency)}</div>
-        <div>Closing Balance: {formatCurrency(closingBalance ?? net, currency || "INR")}</div>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-zinc-600 dark:text-zinc-400 md:grid-cols-4">
+        <div>Income: <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(income, currency)}</span></div>
+        <div>Expense: <span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(expense, currency)}</span></div>
+        <div>Net: <span className="font-medium text-zinc-900 dark:text-zinc-100">{formatCurrency(net, currency)}</span></div>
+        <div>Closing: <span className="font-medium text-zinc-900 dark:text-zinc-100">{formatCurrency(closingBalance ?? net, currency || "INR")}</span></div>
       </div>
     </div>
   );

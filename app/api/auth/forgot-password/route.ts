@@ -1,4 +1,5 @@
 import { connectToDatabase } from "@/lib/db";
+import { rateLimitByIp } from "@/lib/rate-limit";
 import User from "@/models/User";
 import Otp from "@/models/Otp";
 import bcrypt from "bcryptjs";
@@ -12,6 +13,14 @@ const resetSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const { success } = rateLimitByIp(req, "forgot-password", 5, 60_000);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again later." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await req.json();
     const parsed = resetSchema.safeParse(body);
@@ -30,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     // Check OTP
-    const otpRecord = await Otp.findOne({ email, otp, type: "reset", used: false });
+    const otpRecord = await Otp.findOne({ email, otp, type: "reset", used: false, expiresAt: { $gt: new Date() } });
     if (!otpRecord) {
       return NextResponse.json({ error: "Invalid or expired verification code" }, { status: 400 });
     }

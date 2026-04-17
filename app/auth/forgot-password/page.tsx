@@ -15,27 +15,47 @@ export default function ForgotPasswordPage() {
   const [newPassword, setNewPassword] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
-  const requestOtp = async (event: FormEvent) => {
-    event.preventDefault();
+  const startCooldown = () => {
+    setResendCooldown(30);
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) { clearInterval(interval); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const sendOtp = async () => {
     setLoading(true);
-
     const res = await fetch("/api/auth/otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, type: "reset" }),
     });
-
     setLoading(false);
 
     if (!res.ok) {
       const data = await res.json();
       toast.error(data.error || "Failed to send reset code");
-      return;
+      return false;
     }
 
     toast.success("Reset code sent to your email");
-    setStep(2);
+    startCooldown();
+    return true;
+  };
+
+  const requestOtp = async (event: FormEvent) => {
+    event.preventDefault();
+    const ok = await sendOtp();
+    if (ok) setStep(2);
+  };
+
+  const resendOtp = async () => {
+    if (resendCooldown > 0) return;
+    await sendOtp();
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -69,7 +89,7 @@ export default function ForgotPasswordPage() {
         <CardContent>
           {step === 1 ? (
             <form className="space-y-3" onSubmit={requestOtp}>
-              <p className="text-sm text-slate-500 mb-4">Enter your email address and we'll send you a verification code.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">Enter your email address and we'll send you a verification code.</p>
               <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               <Button className="w-full" disabled={loading}>
                 {loading ? "Sending Code..." : "Continue"}
@@ -77,15 +97,23 @@ export default function ForgotPasswordPage() {
             </form>
           ) : (
             <form className="space-y-3" onSubmit={onSubmit}>
-              <p className="text-sm text-slate-500 mb-4">Enter the 6-digit code sent to {email} and your new password.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">Enter the 6-digit code sent to {email} and your new password.</p>
               <Input type="text" placeholder="6-digit verification code" value={otp} onChange={(e) => setOtp(e.target.value)} required minLength={6} maxLength={6} />
               <Input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} />
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Resetting..." : "Reset Password"}
               </Button>
+              <button
+                type="button"
+                onClick={resendOtp}
+                disabled={resendCooldown > 0 || loading}
+                className="w-full text-center text-sm text-indigo-600 hover:text-indigo-500 disabled:text-zinc-400 disabled:cursor-not-allowed"
+              >
+                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn\u2019t receive the code? Resend"}
+              </button>
             </form>
           )}
-          <p className="mt-4 text-sm text-slate-500 text-center">
+          <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400 text-center">
             Remembered your password? <Link href="/auth/signin" className="text-indigo-600">Sign in</Link>
           </p>
         </CardContent>
