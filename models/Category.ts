@@ -7,7 +7,7 @@ const CategorySchema = new Schema(
     color: { type: String, required: true },
     type: { type: String, enum: ["income", "expense"], required: true },
   },
-  { timestamps: false }
+  { timestamps: true }
 );
 
 CategorySchema.index({ userId: 1, name: 1, type: 1 }, { unique: true });

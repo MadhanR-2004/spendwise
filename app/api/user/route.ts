@@ -1,7 +1,10 @@
 import { connectToDatabase } from "@/lib/db";
 import { CURRENCIES } from "@/lib/constants";
 import { getAuthedUser } from "@/lib/server";
+import Budget from "@/models/Budget";
 import Category from "@/models/Category";
+import Otp from "@/models/Otp";
+import SavingsGoal from "@/models/SavingsGoal";
 import Transaction from "@/models/Transaction";
 import User from "@/models/User";
 import { NextResponse } from "next/server";
@@ -38,9 +41,18 @@ export async function DELETE() {
 
   try {
     await connectToDatabase();
+    const user = await User.findById(userId).lean();
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     await Promise.all([
       Transaction.deleteMany({ userId }),
       Category.deleteMany({ userId }),
+      Budget.deleteMany({ userId }),
+      SavingsGoal.deleteMany({ userId }),
+      Otp.deleteMany({ email: (user as { email: string }).email }),
+      User.deleteOne({ _id: userId }),
     ]);
     return NextResponse.json({ success: true });
   } catch {

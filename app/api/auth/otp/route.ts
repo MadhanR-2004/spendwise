@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { OTP_EXPIRY_MS } from "@/lib/constants";
 import { connectToDatabase } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { rateLimitByIp } from "@/lib/rate-limit";
@@ -34,12 +35,11 @@ export async function POST(req: Request) {
 
     const exists = await User.exists({ email });
 
-    if (type === "register" && exists) {
-      return NextResponse.json({ error: "Email already registered" }, { status: 409 });
-    }
-
-    if (type === "reset" && !exists) {
-      return NextResponse.json({ error: "Email not found" }, { status: 404 });
+    // For security, avoid revealing whether the email exists.
+    // If the email state doesn't match the operation, return success
+    // without actually sending an OTP.
+    if ((type === "register" && exists) || (type === "reset" && !exists)) {
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     // Invalidate any previous unused OTPs for this email+type
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
     // Generate cryptographically secure 6-digit OTP
     const otp = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
 
     // Save to DB
     await Otp.create({

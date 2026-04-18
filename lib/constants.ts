@@ -25,3 +25,18 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 export const CURRENCIES = ["INR", "USD", "EUR", "GBP"] as const;
+
+export const DEFAULT_CURRENCY = "INR" as const;
+
+export const MAX_AMOUNT = 999_999_999.99;
+
+export const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+export const BCRYPT_SALT_ROUNDS = 10;
+
+export const RATE_LIMITS = {
+  otp: { limit: 5, windowMs: 60_000 },
+  register: { limit: 5, windowMs: 60_000 },
+  forgotPassword: { limit: 5, windowMs: 60_000 },
+  otpAttempt: { limit: 5, windowMs: 15 * 60_000 },
+} as const;

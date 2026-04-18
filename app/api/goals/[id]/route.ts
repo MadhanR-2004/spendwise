@@ -1,21 +1,8 @@
 import { connectToDatabase } from "@/lib/db";
+import { goalUpdateSchema } from "@/lib/schemas";
 import { getAuthedUser } from "@/lib/server";
 import SavingsGoal from "@/models/SavingsGoal";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-
-const updateSchema = z.object({
-  name: z.string().min(1).optional(),
-  targetAmount: z.number().positive().optional(),
-  savedAmount: z.number().min(0).optional(),
-  addAmount: z.number().positive().optional(),
-  deadline: z.string().nullable().optional(),
-  color: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .optional(),
-  icon: z.string().optional(),
-});
 
 export async function PUT(
   req: Request,
@@ -27,12 +14,40 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const parsed = updateSchema.safeParse(body);
+    const parsed = goalUpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
+        { status: 400 }
+      );
     }
 
     await connectToDatabase();
+
+    // Fetch current goal to validate savedAmount cap
+    const currentGoal = await SavingsGoal.findOne({ _id: id, userId });
+    if (!currentGoal) {
+      return NextResponse.json(
+        { error: "Goal not found" },
+        { status: 404 }
+      );
+    }
+
+    // Calculate resulting savedAmount
+    const targetAmount = parsed.data.targetAmount ?? currentGoal.targetAmount;
+    let newSavedAmount = currentGoal.savedAmount;
+    if (parsed.data.savedAmount !== undefined) {
+      newSavedAmount = parsed.data.savedAmount;
+    }
+    if (parsed.data.addAmount) {
+      newSavedAmount += parsed.data.addAmount;
+    }
+    if (newSavedAmount > targetAmount) {
+      return NextResponse.json(
+        { error: "Saved amount cannot exceed target amount" },
+        { status: 400 }
+      );
+    }
 
     const { addAmount, deadline, ...rest } = parsed.data;
     const updateOps: Record<string, unknown> = {};
@@ -53,13 +68,6 @@ export async function PUT(
       updateOps,
       { new: true }
     );
-
-    if (!updated) {
-      return NextResponse.json(
-        { error: "Goal not found" },
-        { status: 404 }
-      );
-    }
 
     return NextResponse.json(updated);
   } catch {

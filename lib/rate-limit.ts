@@ -44,3 +44,14 @@ export function rateLimitByIp(
   const key = `${endpoint}:${ip}`;
   return rateLimit(key, limit, windowMs);
 }
+
+/** Per-email OTP attempt limiter to prevent brute-force guessing */
+export function rateLimitOtpAttempt(
+  email: string,
+  type: string,
+  limit = 5,
+  windowMs = 15 * 60_000 // 15 minutes
+) {
+  const key = `otp_attempt:${email}:${type}`;
+  return rateLimit(key, limit, windowMs);
+}

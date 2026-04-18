@@ -10,26 +10,35 @@ import { TransactionModal } from "@/components/TransactionModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { formatCurrency, friendlyDate } from "@/lib/utils";
+import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { SummaryResponse } from "@/types";
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currency, setCurrency] = useState("INR");
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
 
   const load = async () => {
-    setLoading(true);
-    const [summaryRes, sessionRes] = await Promise.all([
-      fetch("/api/summary"),
-      fetch("/api/auth/session"),
-    ]);
-    const summaryJson = await summaryRes.json();
-    const sessionJson = await sessionRes.json();
-    setSummary(summaryJson);
-    setCurrency(sessionJson?.user?.currency ?? "INR");
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+      const [summaryRes, sessionRes] = await Promise.all([
+        fetch("/api/summary"),
+        fetch("/api/auth/session"),
+      ]);
+      if (!summaryRes.ok) throw new Error("Failed to load dashboard data");
+      const summaryJson = await summaryRes.json();
+      const sessionJson = await sessionRes.json();
+      setSummary(summaryJson);
+      setCurrency(sessionJson?.user?.currency ?? "INR");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -60,7 +69,21 @@ export default function DashboardPage() {
   }, [summary]);
 
   if (loading) {
-    return <div className="h-40 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />;
+    return <DashboardSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+        <p className="text-sm text-red-500 dark:text-red-400" role="alert">{error}</p>
+        <button
+          onClick={load}
+          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   if (!summary) return null;

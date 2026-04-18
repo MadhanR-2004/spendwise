@@ -20,25 +20,34 @@ import {
 } from "@/components/ui/dialog";
 import { formatCurrency, friendlyDate } from "@/lib/utils";
 import { ConfirmDialog, useConfirm } from "@/components/ui/confirm-dialog";
+import { GoalsSkeleton } from "@/components/ui/skeleton";
 import { SavingsGoalItem } from "@/types";
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<SavingsGoalItem[]>([]);
   const [currency, setCurrency] = useState("INR");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
 
   const load = async () => {
-    setLoading(true);
-    const [goalsRes, sessionRes] = await Promise.all([
-      fetch("/api/goals"),
-      fetch("/api/auth/session"),
-    ]);
-    const goalsJson = await goalsRes.json();
-    const sessionJson = await sessionRes.json();
-    setGoals(goalsJson);
-    setCurrency(sessionJson?.user?.currency ?? "INR");
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+      const [goalsRes, sessionRes] = await Promise.all([
+        fetch("/api/goals"),
+        fetch("/api/auth/session"),
+      ]);
+      if (!goalsRes.ok) throw new Error("Failed to load goals");
+      const goalsJson = await goalsRes.json();
+      const sessionJson = await sessionRes.json();
+      setGoals(goalsJson);
+      setCurrency(sessionJson?.user?.currency ?? "INR");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -65,6 +74,8 @@ export default function GoalsPage() {
 
   const totalTarget = goals.reduce((s, g) => s + g.targetAmount, 0);
   const totalSaved = goals.reduce((s, g) => s + g.savedAmount, 0);
+
+  if (loading) return <GoalsSkeleton />;
 
   return (
     <div className="space-y-6">
@@ -135,14 +146,10 @@ export default function GoalsPage() {
       )}
 
       {/* Goals Grid */}
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-56 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
-            />
-          ))}
+      {error ? (
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <p className="text-sm text-red-500 dark:text-red-400" role="alert">{error}</p>
+          <button onClick={load} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Retry</button>
         </div>
       ) : goals.length === 0 ? (
         <GlassCard className="flex flex-col items-center justify-center p-12 text-center">

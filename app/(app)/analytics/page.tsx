@@ -25,42 +25,48 @@ import {
 import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { formatCurrency } from "@/lib/utils";
+import { AnalyticsSkeleton } from "@/components/ui/skeleton";
 import { AnalyticsResponse } from "@/types";
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [currency, setCurrency] = useState("INR");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
+  const load = async () => {
+    try {
       setLoading(true);
+      setError(null);
       const [analyticsRes, sessionRes] = await Promise.all([
         fetch("/api/analytics"),
         fetch("/api/auth/session"),
       ]);
+      if (!analyticsRes.ok) throw new Error("Failed to load analytics");
       const analytics = await analyticsRes.json();
       const session = await sessionRes.json();
       setData(analytics);
       setCurrency(session?.user?.currency ?? "INR");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
       setLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
     load();
   }, []);
 
   if (loading) {
+    return <AnalyticsSkeleton />;
+  }
+
+  if (error) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-28 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
-            />
-          ))}
-        </div>
-        <div className="h-80 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800" />
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+        <p className="text-sm text-red-500 dark:text-red-400" role="alert">{error}</p>
+        <button onClick={load} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Retry</button>
       </div>
     );
   }

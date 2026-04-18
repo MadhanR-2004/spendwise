@@ -12,12 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { formatCurrency, monthLabel } from "@/lib/utils";
 import { ConfirmDialog, useConfirm } from "@/components/ui/confirm-dialog";
+import { HistoryTableSkeleton } from "@/components/ui/skeleton";
 import { TransactionItem } from "@/types";
 
 export default function HistoryPage() {
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [currency, setCurrency] = useState("INR");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [type, setType] = useState("all");
   const [startDate, setStartDate] = useState("");
@@ -29,31 +31,39 @@ export default function HistoryPage() {
   const confirm = useConfirm();
 
   const fetchData = async () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (startDate) params.set("startDate", startDate);
-    if (endDate) params.set("endDate", endDate);
-    if (search) params.set("search", search);
-    if (type) params.set("type", type);
-    if (selectedCategories.length) params.set("category", selectedCategories.join(","));
-    params.set("page", String(page));
-    params.set("limit", "10");
+    try {
+      setLoading(true);
+      setError(null);
+      const params = new URLSearchParams();
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+      if (search) params.set("search", search);
+      if (type) params.set("type", type);
+      if (selectedCategories.length) params.set("category", selectedCategories.join(","));
+      params.set("page", String(page));
+      params.set("limit", "10");
 
-    const [txRes, customCategories, sessionRes] = await Promise.all([
-      fetch(`/api/transactions?${params.toString()}`),
-      fetch("/api/categories"),
-      fetch("/api/auth/session"),
-    ]);
+      const [txRes, customCategories, sessionRes] = await Promise.all([
+        fetch(`/api/transactions?${params.toString()}`),
+        fetch("/api/categories"),
+        fetch("/api/auth/session"),
+      ]);
 
-    const txJson = await txRes.json();
-    const customJson = await customCategories.json();
-    const sessionJson = await sessionRes.json();
+      if (!txRes.ok) throw new Error("Failed to load transactions");
 
-    setTransactions(txJson.data ?? []);
-    setPages(txJson.pages ?? 1);
-    setCategories([...DEFAULT_CATEGORIES, ...customJson]);
-    setCurrency(sessionJson?.user?.currency ?? "INR");
-    setLoading(false);
+      const txJson = await txRes.json();
+      const customJson = customCategories.ok ? await customCategories.json() : [];
+      const sessionJson = await sessionRes.json();
+
+      setTransactions(txJson.data ?? []);
+      setPages(txJson.pages ?? 1);
+      setCategories([...DEFAULT_CATEGORIES, ...customJson]);
+      setCurrency(sessionJson?.user?.currency ?? "INR");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -173,7 +183,14 @@ export default function HistoryPage() {
           <Card>
             <CardContent className="pt-4">
               {loading ? (
-                <div className="h-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+                <HistoryTableSkeleton />
+              ) : error ? (
+                <div className="flex flex-col items-center gap-3 py-10 text-center">
+                  <p className="text-sm text-red-500 dark:text-red-400" role="alert">{error}</p>
+                  <button onClick={fetchData} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Retry</button>
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">No transactions found. Try adjusting your filters.</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">

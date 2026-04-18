@@ -27,9 +27,16 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-optical-sizing: auto;
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.025em;
 }
 
 /* Add bottom padding on mobile so content isn't hidden behind the FAB */
@@ -57,4 +64,11 @@ body {
 
 .dark .heat-4 {
   background: #818cf8;
+}
+
+/* Shimmer skeleton animation */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }

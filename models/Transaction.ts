@@ -9,7 +9,7 @@ const TransactionSchema = new Schema(
     note: { type: String, default: "" },
     date: { type: Date, required: true, index: true },
   },
-  { timestamps: { createdAt: true, updatedAt: false } }
+  { timestamps: true }
 );
 
 const Transaction = models.Transaction || model("Transaction", TransactionSchema);

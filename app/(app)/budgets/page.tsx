@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import { ConfirmDialog, useConfirm } from "@/components/ui/confirm-dialog";
+import { BudgetsSkeleton } from "@/components/ui/skeleton";
 import { BudgetItem } from "@/types";
 
 export default function BudgetsPage() {
@@ -20,22 +21,30 @@ export default function BudgetsPage() {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [currency, setCurrency] = useState("INR");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
 
   const load = async () => {
-    setLoading(true);
-    const [budgetRes, catRes, sessionRes] = await Promise.all([
-      fetch("/api/budgets"),
-      fetch("/api/categories"),
-      fetch("/api/auth/session"),
-    ]);
-    const budgetJson = await budgetRes.json();
-    const catJson = await catRes.json();
-    const sessionJson = await sessionRes.json();
-    setBudgets(budgetJson);
-    setCategories([...DEFAULT_CATEGORIES, ...catJson]);
-    setCurrency(sessionJson?.user?.currency ?? "INR");
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+      const [budgetRes, catRes, sessionRes] = await Promise.all([
+        fetch("/api/budgets"),
+        fetch("/api/categories"),
+        fetch("/api/auth/session"),
+      ]);
+      if (!budgetRes.ok) throw new Error("Failed to load budgets");
+      const budgetJson = await budgetRes.json();
+      const catJson = catRes.ok ? await catRes.json() : [];
+      const sessionJson = await sessionRes.json();
+      setBudgets(budgetJson);
+      setCategories([...DEFAULT_CATEGORIES, ...catJson]);
+      setCurrency(sessionJson?.user?.currency ?? "INR");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -59,6 +68,8 @@ export default function BudgetsPage() {
   const monthlyBudgets = budgets.filter((b) => b.period === "monthly");
   const totalBudget = monthlyBudgets.reduce((s, b) => s + b.amount, 0);
   const totalSpent = monthlyBudgets.reduce((s, b) => s + b.spent, 0);
+
+  if (loading) return <BudgetsSkeleton />;
 
   return (
     <div className="space-y-6">
@@ -144,14 +155,10 @@ export default function BudgetsPage() {
       )}
 
       {/* Budget Cards */}
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-48 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800"
-            />
-          ))}
+      {error ? (
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <p className="text-sm text-red-500 dark:text-red-400" role="alert">{error}</p>
+          <button onClick={load} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Retry</button>
         </div>
       ) : budgets.length === 0 ? (
         <GlassCard className="flex flex-col items-center justify-center p-12 text-center">

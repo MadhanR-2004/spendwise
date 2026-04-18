@@ -1,12 +1,15 @@
+import { BCRYPT_SALT_ROUNDS } from "@/lib/constants";
 import { connectToDatabase } from "@/lib/db";
+import { rateLimitOtpAttempt } from "@/lib/rate-limit";
 import { getAuthedUser } from "@/lib/server";
+import Otp from "@/models/Otp";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const passwordSchema = z.object({
-  currentPassword: z.string().min(6),
+  otp: z.string().length(6),
   newPassword: z.string().min(6),
 });
 
@@ -29,12 +32,36 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
-    if (!valid) {
-      return NextResponse.json({ error: "Incorrect current password" }, { status: 400 });
+    // Rate-limit OTP verification attempts
+    const otpLimit = rateLimitOtpAttempt(user.email, "password-change");
+    if (!otpLimit.success) {
+      return NextResponse.json(
+        { error: "Too many attempts. Try again later." },
+        { status: 429 }
+      );
     }
 
-    user.passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
+    // Verify OTP
+    const otpRecord = await Otp.findOne({
+      email: user.email,
+      otp: parsed.data.otp,
+      type: "reset",
+      used: false,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!otpRecord) {
+      return NextResponse.json(
+        { error: "Invalid or expired verification code" },
+        { status: 400 }
+      );
+    }
+
+    // Mark OTP as used
+    otpRecord.used = true;
+    await otpRecord.save();
+
+    user.passwordHash = await bcrypt.hash(parsed.data.newPassword, BCRYPT_SALT_ROUNDS);
     await user.save();
 
     return NextResponse.json({ success: true });

@@ -1,5 +1,6 @@
+import { BCRYPT_SALT_ROUNDS, DEFAULT_CURRENCY } from "@/lib/constants";
 import { connectToDatabase } from "@/lib/db";
-import { rateLimitByIp } from "@/lib/rate-limit";
+import { rateLimitByIp, rateLimitOtpAttempt } from "@/lib/rate-limit";
 import User from "@/models/User";
 import Otp from "@/models/Otp";
 import Transaction from "@/models/Transaction";
@@ -40,7 +41,16 @@ export async function POST(req: Request) {
     }
 
     const { email, otp, name, password, initialAmount } = parsed.data;
-    
+
+    // Rate-limit OTP verification attempts per email
+    const otpLimit = rateLimitOtpAttempt(email, "register");
+    if (!otpLimit.success) {
+      return NextResponse.json(
+        { error: "Too many verification attempts. Try again later." },
+        { status: 429 }
+      );
+    }
+
     // Check OTP
     const otpRecord = await Otp.findOne({ email, otp, type: "register", used: false, expiresAt: { $gt: new Date() } });
     if (!otpRecord) {
@@ -51,12 +61,12 @@ export async function POST(req: Request) {
     otpRecord.used = true;
     await otpRecord.save();
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
     const user = await User.create({
       name,
       email,
       passwordHash,
-      currency: "INR",
+      currency: DEFAULT_CURRENCY,
     });
 
     if (initialAmount > 0) {

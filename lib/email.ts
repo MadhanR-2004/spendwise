@@ -34,8 +34,10 @@ export async function sendEmail({
       subject,
       html,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to send email", error);
-    throw new Error(error.message || "Failed to send email");
+    const message =
+      error instanceof Error ? error.message : "Failed to send email";
+    throw new Error(message);
   }
 }

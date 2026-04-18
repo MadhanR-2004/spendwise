@@ -1,5 +1,6 @@
+import { BCRYPT_SALT_ROUNDS } from "@/lib/constants";
 import { connectToDatabase } from "@/lib/db";
-import { rateLimitByIp } from "@/lib/rate-limit";
+import { rateLimitByIp, rateLimitOtpAttempt } from "@/lib/rate-limit";
 import User from "@/models/User";
 import Otp from "@/models/Otp";
 import bcrypt from "bcryptjs";
@@ -38,6 +39,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
+    // Rate-limit OTP verification attempts per email
+    const otpLimit = rateLimitOtpAttempt(email, "reset");
+    if (!otpLimit.success) {
+      return NextResponse.json(
+        { error: "Too many verification attempts. Try again later." },
+        { status: 429 }
+      );
+    }
+
     // Check OTP
     const otpRecord = await Otp.findOne({ email, otp, type: "reset", used: false, expiresAt: { $gt: new Date() } });
     if (!otpRecord) {
@@ -49,7 +59,7 @@ export async function POST(req: Request) {
     await otpRecord.save();
 
     // Hash new password and update user
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
     user.passwordHash = passwordHash;
     await user.save();
 

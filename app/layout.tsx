@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
-const inter = Inter({
+const jakarta = Plus_Jakarta_Sans({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
@@ -29,7 +29,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${jakarta.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-zinc-50 text-zinc-900 transition-colors duration-300 dark:bg-black dark:text-zinc-100">
         <script

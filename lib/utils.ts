@@ -6,8 +6,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const CURRENCY_LOCALE: Record<string, string> = {
+  INR: "en-IN",
+  USD: "en-US",
+  EUR: "de-DE",
+  GBP: "en-GB",
+};
+
 export function formatCurrency(amount: number, currency = "INR") {
-  return new Intl.NumberFormat("en-IN", {
+  const locale = CURRENCY_LOCALE[currency] || "en-US";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 2,

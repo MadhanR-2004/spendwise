@@ -55,12 +55,12 @@ export function Sidebar() {
   return (
     <>
       {/* ===== Desktop sidebar ===== */}
-      <aside className="relative z-10 hidden border-r border-zinc-200/50 bg-white/70 backdrop-blur-xl dark:border-white/[0.06] dark:bg-white/[0.02] lg:flex lg:min-h-screen lg:w-72 lg:flex-col lg:px-5 lg:py-6">
+      <aside aria-label="Main navigation" className="relative z-10 hidden border-r border-zinc-200/50 bg-white/70 backdrop-blur-xl dark:border-white/[0.06] dark:bg-white/[0.02] lg:flex lg:min-h-screen lg:w-72 lg:flex-col lg:px-5 lg:py-6">
         <div className="mb-8">
           <span className="text-xl font-bold tracking-tight">Spendwise</span>
         </div>
 
-        <nav className="flex-1 space-y-1">
+        <nav aria-label="Sidebar" className="flex-1 space-y-1">
           {links.map((link) => {
             const Icon = link.icon;
             return (
@@ -86,9 +86,10 @@ export function Sidebar() {
             variant="outline"
             size="sm"
             className="rounded-xl"
+            aria-label="Log out of your account"
             onClick={() => signOut({ callbackUrl: "/auth/signin" })}
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4" aria-hidden="true" />
             Logout
           </Button>
         </div>
@@ -153,10 +154,11 @@ export function Sidebar() {
               {/* Logout */}
               <button
                 type="button"
+                aria-label="Log out of your account"
                 onClick={() => signOut({ callbackUrl: "/auth/signin" })}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-500 transition-all hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4" aria-hidden="true" />
                 Logout
               </button>
             </motion.nav>
@@ -166,6 +168,8 @@ export function Sidebar() {
         {/* FAB button */}
         <motion.button
           type="button"
+          aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
           className={cn(
             "relative z-50 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border shadow-[0_4px_24px_rgba(0,0,0,0.15)] backdrop-blur-2xl transition-all",
@@ -178,7 +182,7 @@ export function Sidebar() {
         >
           {/* Inner refraction ring */}
           <span className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-white/[0.1]" />
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {mobileOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
         </motion.button>
       </div>
     </>

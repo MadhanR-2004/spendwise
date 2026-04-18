@@ -14,10 +14,10 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    avatarUrl: { type: String },
+    passwordHash: { type: String, required: true },
+    currency: { type: String, default: "INR" },
   },
-  { timestamps: true }
+  { timestamps: { createdAt: true, updatedAt: true } }
 );
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
@@ -40,7 +40,8 @@ async function seed() {
     await User.create({
       name: "Dummy User",
       email: email,
-      password: hashedPassword,
+      passwordHash: hashedPassword,
+      currency: "INR",
     });
 
     console.log("Dummy user inserted successfully!");

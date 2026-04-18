@@ -1,16 +1,10 @@
+import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { connectToDatabase } from "@/lib/db";
+import { transactionCreateSchema, searchParamsSchema } from "@/lib/schemas";
 import { getAuthedUser } from "@/lib/server";
+import Category from "@/models/Category";
 import Transaction from "@/models/Transaction";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-
-const createSchema = z.object({
-  amount: z.number().positive(),
-  type: z.enum(["income", "expense"]),
-  category: z.string().min(1),
-  note: z.string().trim().optional().default(""),
-  date: z.string(),
-});
 
 export async function GET(req: Request) {
   const { userId, response } = await getAuthedUser();
@@ -20,14 +14,21 @@ export async function GET(req: Request) {
     await connectToDatabase();
 
     const url = new URL(req.url);
-    const startDate = url.searchParams.get("startDate");
-    const endDate = url.searchParams.get("endDate");
-    const category = url.searchParams.get("category");
-    const type = url.searchParams.get("type");
-    const search = url.searchParams.get("search");
-    const page = Number(url.searchParams.get("page") ?? "1");
-    const limit = Number(url.searchParams.get("limit") ?? "10");
+    const params = searchParamsSchema.safeParse({
+      startDate: url.searchParams.get("startDate") || undefined,
+      endDate: url.searchParams.get("endDate") || undefined,
+      category: url.searchParams.get("category") || undefined,
+      type: url.searchParams.get("type") || undefined,
+      search: url.searchParams.get("search") || undefined,
+      page: url.searchParams.get("page") || undefined,
+      limit: url.searchParams.get("limit") || undefined,
+    });
 
+    if (!params.success) {
+      return NextResponse.json({ error: "Invalid query parameters" }, { status: 400 });
+    }
+
+    const { startDate, endDate, category, type, search, page, limit } = params.data;
     const filter: Record<string, unknown> = { userId };
 
     if (startDate || endDate) {
@@ -77,10 +78,28 @@ export async function POST(req: Request) {
   try {
     await connectToDatabase();
     const body = await req.json();
-    const parsed = createSchema.safeParse(body);
+    const parsed = transactionCreateSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
+        { status: 400 }
+      );
+    }
+
+    // Validate category exists (default or custom)
+    const isDefault = DEFAULT_CATEGORIES.some((c) => c.name === parsed.data.category);
+    if (!isDefault) {
+      const categoryExists = await Category.exists({
+        userId,
+        name: parsed.data.category,
+      });
+      if (!categoryExists) {
+        return NextResponse.json(
+          { error: "Category not found" },
+          { status: 400 }
+        );
+      }
     }
 
     const created = await Transaction.create({

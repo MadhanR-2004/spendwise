@@ -1,24 +1,13 @@
+import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { connectToDatabase } from "@/lib/db";
+import { budgetCreateSchema } from "@/lib/schemas";
 import { getAuthedUser } from "@/lib/server";
 import Budget from "@/models/Budget";
+import Category from "@/models/Category";
 import Transaction from "@/models/Transaction";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
 import { Types } from "mongoose";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-
-const budgetSchema = z.object({
-  name: z.string().min(1),
-  amount: z.number().positive(),
-  period: z.enum(["weekly", "monthly"]),
-  category: z.string().nullable().optional().default(null),
-  color: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .optional()
-    .default("#6366f1"),
-  alertThreshold: z.number().min(0).max(100).optional().default(80),
-});
 
 export async function GET() {
   const { userId, response } = await getAuthedUser();
@@ -89,12 +78,33 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const parsed = budgetSchema.safeParse(body);
+    const parsed = budgetCreateSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
+        { status: 400 }
+      );
     }
 
     await connectToDatabase();
+
+    // Validate category exists if specified (default or custom)
+    if (parsed.data.category) {
+      const isDefault = DEFAULT_CATEGORIES.some((c) => c.name === parsed.data.category);
+      if (!isDefault) {
+        const categoryExists = await Category.exists({
+          userId,
+          name: parsed.data.category,
+        });
+        if (!categoryExists) {
+          return NextResponse.json(
+            { error: "Category not found" },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const created = await Budget.create({ ...parsed.data, userId });
     return NextResponse.json(created, { status: 201 });
   } catch (err: unknown) {

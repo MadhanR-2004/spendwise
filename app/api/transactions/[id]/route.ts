@@ -1,16 +1,10 @@
+import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { connectToDatabase } from "@/lib/db";
+import { transactionUpdateSchema } from "@/lib/schemas";
 import { getAuthedUser } from "@/lib/server";
+import Category from "@/models/Category";
 import Transaction from "@/models/Transaction";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-
-const updateSchema = z.object({
-  amount: z.number().positive(),
-  type: z.enum(["income", "expense"]),
-  category: z.string().min(1),
-  note: z.string().trim().optional().default(""),
-  date: z.string(),
-});
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { userId, response } = await getAuthedUser();
@@ -19,13 +13,32 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params;
     const body = await req.json();
-    const parsed = updateSchema.safeParse(body);
+    const parsed = transactionUpdateSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
+        { status: 400 }
+      );
     }
 
     await connectToDatabase();
+
+    // Validate category exists (default or custom)
+    const isDefault = DEFAULT_CATEGORIES.some((c) => c.name === parsed.data.category);
+    if (!isDefault) {
+      const categoryExists = await Category.exists({
+        userId,
+        name: parsed.data.category,
+      });
+      if (!categoryExists) {
+        return NextResponse.json(
+          { error: "Category not found" },
+          { status: 400 }
+        );
+      }
+    }
+
     const updated = await Transaction.findOneAndUpdate(
       { _id: id, userId },
       {

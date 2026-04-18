@@ -22,18 +22,28 @@ export default function SettingsPage() {
   const [currency, setCurrency] = useState("INR");
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
   const [newCategory, setNewCategory] = useState({ name: "", color: "#14b8a6", type: "expense" as "income" | "expense" });
-  const [currentPassword, setCurrentPassword] = useState("");
+
+  // OTP-based password change
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
   const confirm = useConfirm();
 
   const load = async () => {
-    const [sessionRes, categoryRes] = await Promise.all([fetch("/api/auth/session"), fetch("/api/categories")]);
-    const session = await sessionRes.json();
-    const categories = await categoryRes.json();
-    setName(session?.user?.name ?? "");
-    setEmail(session?.user?.email ?? "");
-    setCurrency(session?.user?.currency ?? "INR");
-    setCustomCategories(categories ?? []);
+    try {
+      const [sessionRes, categoryRes] = await Promise.all([fetch("/api/auth/session"), fetch("/api/categories")]);
+      const session = await sessionRes.json();
+      const categories = categoryRes.ok ? await categoryRes.json() : [];
+      setName(session?.user?.name ?? "");
+      setEmail(session?.user?.email ?? "");
+      setCurrency(session?.user?.currency ?? "INR");
+      setCustomCategories(categories ?? []);
+    } catch {
+      toast.error("Failed to load settings");
+    }
   };
 
   useEffect(() => {
@@ -50,16 +60,51 @@ export default function SettingsPage() {
     toast.success("Profile updated");
   };
 
+  const sendPasswordOtp = async () => {
+    if (!email) return toast.error("Email not loaded yet");
+    setSendingOtp(true);
+    try {
+      const res = await fetch("/api/auth/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, type: "reset" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        return toast.error(data.error || "Failed to send OTP");
+      }
+      setOtpSent(true);
+      toast.success("Verification code sent to your email");
+    } catch {
+      toast.error("Failed to send OTP");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
   const changePassword = async () => {
-    const res = await fetch("/api/user/password", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-    if (!res.ok) return toast.error("Failed to update password");
-    setCurrentPassword("");
-    setNewPassword("");
-    toast.success("Password changed");
+    if (!otpCode || otpCode.length !== 6) return toast.error("Enter the 6-digit code");
+    if (!newPassword || newPassword.length < 6) return toast.error("Password must be at least 6 characters");
+    setChangingPassword(true);
+    try {
+      const res = await fetch("/api/user/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otp: otpCode, newPassword }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        return toast.error(data.error || "Failed to update password");
+      }
+      setOtpSent(false);
+      setOtpCode("");
+      setNewPassword("");
+      toast.success("Password changed successfully");
+    } catch {
+      toast.error("Failed to update password");
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const addCategory = async () => {
@@ -96,7 +141,15 @@ export default function SettingsPage() {
         <CardHeader><CardTitle>Profile</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Display name" />
-          <Input value={email} readOnly placeholder="Email" />
+          <div className="relative">
+            <Input
+              value={email}
+              readOnly
+              placeholder="Email"
+              className="cursor-not-allowed bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-500"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">Cannot be changed</span>
+          </div>
           <Select
             value={currency}
             onChange={setCurrency}
@@ -107,11 +160,45 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Change Password</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
-          <Input type="password" placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-          <Input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-          <Button onClick={changePassword}>Update Password</Button>
+        <CardHeader>
+          <CardTitle>Change Password</CardTitle>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            A verification code will be sent to your email for security
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {!otpSent ? (
+            <Button onClick={sendPasswordOtp} disabled={sendingOtp}>
+              {sendingOtp ? "Sending…" : "Send Verification Code"}
+            </Button>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-3">
+              <Input
+                placeholder="6-digit code"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                maxLength={6}
+                inputMode="numeric"
+              />
+              <Input
+                type="password"
+                placeholder="New password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button onClick={changePassword} disabled={changingPassword} className="flex-1">
+                  {changingPassword ? "Updating…" : "Update Password"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setOtpSent(false); setOtpCode(""); setNewPassword(""); }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -1,21 +1,8 @@
 import { connectToDatabase } from "@/lib/db";
+import { goalCreateSchema } from "@/lib/schemas";
 import { getAuthedUser } from "@/lib/server";
 import SavingsGoal from "@/models/SavingsGoal";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-
-const goalSchema = z.object({
-  name: z.string().min(1),
-  targetAmount: z.number().positive(),
-  savedAmount: z.number().min(0).optional().default(0),
-  deadline: z.string().nullable().optional(),
-  color: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .optional()
-    .default("#8b5cf6"),
-  icon: z.string().optional().default("target"),
-});
 
 export async function GET() {
   const { userId, response } = await getAuthedUser();
@@ -34,9 +21,20 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const parsed = goalSchema.safeParse(body);
+    const parsed = goalCreateSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
+        { status: 400 }
+      );
+    }
+
+    // Validate savedAmount doesn't exceed target
+    if (parsed.data.savedAmount > parsed.data.targetAmount) {
+      return NextResponse.json(
+        { error: "Saved amount cannot exceed target amount" },
+        { status: 400 }
+      );
     }
 
     await connectToDatabase();

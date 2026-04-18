@@ -1,20 +1,8 @@
 import { connectToDatabase } from "@/lib/db";
+import { budgetUpdateSchema } from "@/lib/schemas";
 import { getAuthedUser } from "@/lib/server";
 import Budget from "@/models/Budget";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-
-const updateSchema = z.object({
-  name: z.string().min(1).optional(),
-  amount: z.number().positive().optional(),
-  period: z.enum(["weekly", "monthly"]).optional(),
-  category: z.string().nullable().optional(),
-  color: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .optional(),
-  alertThreshold: z.number().min(0).max(100).optional(),
-});
 
 export async function PUT(
   req: Request,
@@ -26,9 +14,12 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const parsed = updateSchema.safeParse(body);
+    const parsed = budgetUpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid payload" },
+        { status: 400 }
+      );
     }
 
     await connectToDatabase();
